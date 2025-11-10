@@ -2,16 +2,40 @@ from kafka import KafkaProducer
 from const import *
 import sys
 
+broker = f"{BROKER_ADDR}:{BROKER_PORT}"
 try:
-    topic = sys.argv[1]
-except:
-    print ('Usage: python3 producer <topic_name>')
-    exit(1)
-    
-producer = KafkaProducer(bootstrap_servers=[BROKER_ADDR + ':' + BROKER_PORT])
-for i in range(100):
-    msg = 'My ' + str(i) + 'st message for topic ' + topic
-    print ('Sending message: ' + msg)
-    producer.send(topic, value=msg.encode())
+    producer = KafkaProducer(
+        bootstrap_servers=[broker],
+        value_serializer=lambda v: v.encode('utf-8')
+    )
+except Exception as e:
+    print(f"Erro ao conectar ao Kafka: {e}")
+    sys.exit(1)
 
-producer.flush()
+try:
+    username = input("Qual o seu nome de usuário? ")
+    topic_name = input(f"Olá {username}, para qual grupo quer enviar mensagens? ")
+except KeyboardInterrupt:
+    print("\nSaindo.")
+    sys.exit()
+
+print(f"\n--- Conectado ao grupo '{topic_name}' como '{username}' ---")
+print("Digite 'sair' a qualquer momento para fechar.")
+
+try:
+    while True:
+        message = input("> ")
+
+        if message.lower() == 'sair':
+            break
+        chat_message = f"[{username}]: {message}"
+
+        print(f"Enviando para '{topic_name}' -> {chat_message}")
+        producer.send(topic_name, value=chat_message)
+        producer.flush() 
+
+except KeyboardInterrupt:
+    print("\nDesconectando...")
+finally:
+    producer.close()
+    print("Produtor fechado.")
